@@ -17,7 +17,7 @@ void vect2test (cv::Mat &shape, std::vector<double> &test);
 
 void file2vect (char* filename, std::vector<double> &vect);
 
-void pca_project (std::vector<double> &test, std::vector<double> &eigv[], eigsize, std::vector<double> &feat)
+void pca_project (std::vector<double> &test, std::vector<double> eigv[], int eigsize, std::vector<double> &feat);
 
 void file2eig(const char * filename,std::vector<double> eigv[], int eigsize);
 
@@ -48,13 +48,15 @@ void file2eig(const char * filename,std::vector<double> eigv[], int eigsize)
     infile.close();
 }
 
-void pca_project (std::vector<double> &test, std::vector<double> &eigv[], eigsize, std::vector<double> &feat)
+void pca_project (std::vector<double> &test, std::vector<double> eigv[], std::vector<double> mu, std::vector<double> sigma, int eigsize, std::vector<double> &feat)
 {
-	while(eigsize>0){
-		feat.push_back(test);
-		--eigsize;
+	int ctr = 0;
+	while(ctr<eigsize){
+		for (std::vector<double>::size_type i = 0; i<test.size();++i){
+			feat.push_back(eigv[ctr][i]*(test[i]-mu[i])/sigma[i]);
+			}
+		++ctr;
 	}
-
 }
 
 float distance_between(cv::Point n1, cv::Point n2)

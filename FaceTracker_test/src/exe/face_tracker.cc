@@ -209,7 +209,7 @@ int main() {
 					model._rshape);
 			vect2test(model._shape, test);
 			//printf("Size of the test vector = %f\n", test.front());
-			pca_project(test, feat);
+			pca_project(test, eigv, mu, sigma, eigsize, feat);
 
 		} else {
 			if (showfps) {
