@@ -135,9 +135,9 @@ int main() {
 	cv::Mat tri; //=FACETRACKER::IO::LoadTri(triFile);
 	cv::Mat con; //=FACETRACKER::IO::LoadCon(conFile);
 	std::string impath =
-			"/home/abhijat/Downloads/Intern/git/CUROP---Face-Tracker/svm_training/";
+			"/home/abhijat/Downloads/Intern/git/CUROP---Face-Tracker/svm_training_multi_18/";
 	std::string imfile;
-	imfile = impath + "sad3.jpg";
+
 
 	//initialize camera and display window
 	cv::Mat tmp, frame, gray, im;
@@ -167,7 +167,7 @@ int main() {
 
 		camera>>frame;
 
-		imfile = impath + "sad3.jpg";
+		imfile = impath + "vector.png";
 		//frame = imread(imfile.c_str(), CV_LOAD_IMAGE_COLOR);
 
 		if (scale == 1)
@@ -181,7 +181,8 @@ int main() {
 		//equalizeHist(gray,gray);
 		SimplestCB(im,im,1);
 //============================== set face equalization region extremities
-		cv::Rect facereg = setEqlim(model._shape, im.rows, im.cols);
+		cv::Rect facereg;
+		setEqlim(model._shape, im.rows, im.cols, facereg);
 
 		Mat ROI;
 		try {

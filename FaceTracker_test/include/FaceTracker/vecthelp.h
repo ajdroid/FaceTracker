@@ -46,17 +46,30 @@ void file2eig(const char * filename,std::vector<double> eigv[], int eigsize)
     }
 
     infile.close();
+    return;
 }
 
-void pca_project (std::vector<double> &test, std::vector<double> eigv[], std::vector<double> mu, std::vector<double> sigma, int eigsize, std::vector<double> &feat)
+void pca_project (std::vector<double> &test, std::vector<double> eigv[],
+std::vector<double> mu, std::vector<double> sigma, int eigsize, std::vector<double> &feat)
 {
 	int ctr = 0;
+	double sum = 0;
+	feat.clear();
 	while(ctr<eigsize){
+		sum = 0;
 		for (std::vector<double>::size_type i = 0; i<test.size();++i){
-			feat.push_back(eigv[ctr][i]*(test[i]-mu[i])/sigma[i]);
+			sum += (eigv[ctr][i]*(test[i]-mu[i])/sigma[i]);
+			printf(" test(%lu): %f\n", i,test[i]);
+			if(ctr==0){
+				//printf(" Value (update %lu: %f, \n", i, (eigv[ctr][i]*(test[i]-mu[i])/sigma[i]));
 			}
+		}
+
+		feat.push_back(sum);
 		++ctr;
 	}
+	//printf("Frontin' :  %f\n",feat.front());
+
 }
 
 float distance_between(cv::Point n1, cv::Point n2)
@@ -64,7 +77,7 @@ float distance_between(cv::Point n1, cv::Point n2)
 	return sqrt(((n1.x - n2.x)*(n1.x - n2.x)) + ((n1.y - n2.y)*(n1.y - n2.y)));
 }
 
-cv::Rect setEqlim(cv::Mat &shape, int rows, int cols)
+void setEqlim(cv::Mat &shape, int rows, int cols, cv::Rect &facereg)
 {
 	double top, left, right, bottom;
 	int n = shape.rows / 2;
@@ -90,7 +103,7 @@ cv::Rect setEqlim(cv::Mat &shape, int rows, int cols)
 		else
 			bottom = shape.at<double>(8 + n, 0);
 	} else
-		bottom = shape.at<double>(8 + n, 0) + 40;
+		bottom = shape.at<double>(8 + n, 0) + 20;
 
 	if (shape.at<double>(19 + n, 0) < 10.5) {
 		if (shape.at<double>(19 + n, 0) < 0)
@@ -100,9 +113,9 @@ cv::Rect setEqlim(cv::Mat &shape, int rows, int cols)
 	} else
 		top = shape.at<double>(19 + n, 0) - 10;
 
-	cv::Rect facereg(cv::Point(left, top), cv::Point(right, bottom));
+	facereg= cv::Rect(cv::Point(left, top), cv::Point(right, bottom));
 
-	return facereg;
+	return;
 
 }
 
@@ -112,15 +125,19 @@ void vect2test (cv::Mat &vect, std::vector<double> &test)
 	cv::Point left_eye, right_eye, nose;
 	float between_eyes;
 	test.clear();
-	left_eye = cv::Point(vect.at<double>(36,0)+vect.at<double>(39,0)/2,vect.at<double>(36,0)+vect.at<double>(39,0)/2);
-	right_eye = cv::Point(vect.at<double>(42,0)+vect.at<double>(45,0)/2,vect.at<double>(42+n,0)+vect.at<double>(45+n,0)/2);
+	left_eye = cv::Point(vect.at<double>(36,0)/2+vect.at<double>(39,0)/2,vect.at<double>(36+n,0)/2+vect.at<double>(39+n,0)/2);
+	right_eye = cv::Point(vect.at<double>(42,0)/2+vect.at<double>(45,0)/2,vect.at<double>(42+n,0)/2+vect.at<double>(45+n,0)/2);
 	between_eyes = distance_between(left_eye, right_eye);
 	cv::Point p1, p2;
 
 	//p1 = cv::Point((vect.at<double>(19,0)+vect.at<double>(24,0))/2,vect.at<double>(19+n,0));
 	//p2 = cv::Point(vect.at<double>(8,0), vect.at<double>(9+n,0));
 	//face_size = distance_between(p1,p2);
-	nose = cv::Point(vect.at<double>(30,0)+vect.at<double>(33,0)/2,vect.at<double>(30+n,0)+vect.at<double>(33+n,0)/2);
+	nose = cv::Point((vect.at<double>(30,0)+vect.at<double>(33,0))/2,(vect.at<double>(30+n,0)+vect.at<double>(33+n,0))/2);
+
+//	printf("Point : (%f, %f)\n", vect.at<double>(30,0), vect.at<double>(30+n,0));
+//	printf("D = %f\n", between_eyes);
+//	printf("nose points: X %d, Y %d\n", right_eye.x,right_eye.y);
 
 
 	for(i = 0 ; i < 17;  i++)
@@ -212,7 +229,7 @@ void vect2test (cv::Mat &vect, std::vector<double> &test)
 		   test.push_back (distance_between(p1,p2)/between_eyes);
 		 }
 
-
+		//printf("Test (1) = %f\n", test.front());
 		return;
 
 
