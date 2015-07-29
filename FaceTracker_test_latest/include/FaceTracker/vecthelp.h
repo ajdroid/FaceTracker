@@ -7,19 +7,33 @@
 
 #ifndef VECTHELP_H_
 #define VECTHELP_H_
+
 #include <math.h>
 #include <vector>
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <string>
+
+typedef cv::Point_<double> Point2d;
 
 void vect2test (cv::Mat &shape, std::vector<double> &test);
-
 void file2vect (char* filename, std::vector<double> &vect);
-
 void pca_project (std::vector<double> &test, std::vector<double> eigv[], int eigsize, std::vector<double> &feat);
-
 void file2eig(const char * filename,std::vector<double> eigv[], int eigsize);
+void featfiler (std::vector<double> &feat, const char* filename);
+
+
+void featfiler (std::vector<double> &feat, const char* filename="vector.pca")
+{
+	FILE* file = fopen(filename, "w+");
+	fprintf(file, "1 ");
+	for( std::vector<double>::size_type i=0; i<feat.size(); ++i ){
+		fprintf( file, "%lu:%f ", i+1, feat[i]);
+//		printf("%lu:%f ", i+1, feat[i]);
+	}
+	fclose(file);
+}
 
 void file2eig(const char * filename,std::vector<double> eigv[], int eigsize)
 {
@@ -59,20 +73,20 @@ std::vector<double> mu, std::vector<double> sigma, int eigsize, std::vector<doub
 		sum = 0;
 		for (std::vector<double>::size_type i = 0; i<test.size();++i){
 			sum += (eigv[ctr][i]*(test[i]-mu[i])/sigma[i]);
-			printf(" test(%lu): %f\n", i,test[i]);
-			if(ctr==0){
-				//printf(" Value (update %lu: %f, \n", i, (eigv[ctr][i]*(test[i]-mu[i])/sigma[i]));
-			}
+//			printf(" test(%lu): %f\n", i,test[i]);
 		}
-
 		feat.push_back(sum);
+		//printf("Frontin' %d:  %f\n", ctr, feat.back());
 		++ctr;
 	}
-	//printf("Frontin' :  %f\n",feat.front());
+
+//	for (std::vector<double>::size_type i = 0; i<feat.size();++i){
+//				printf("Feat (%lu): %f\n", i,feat[i]);
+//	}
 
 }
 
-float distance_between(cv::Point n1, cv::Point n2)
+float distance_between(Point2d n1, Point2d n2)
 {
 	return sqrt(((n1.x - n2.x)*(n1.x - n2.x)) + ((n1.y - n2.y)*(n1.y - n2.y)));
 }
@@ -113,7 +127,7 @@ void setEqlim(cv::Mat &shape, int rows, int cols, cv::Rect &facereg)
 	} else
 		top = shape.at<double>(19 + n, 0) - 10;
 
-	facereg= cv::Rect(cv::Point(left, top), cv::Point(right, bottom));
+	facereg= cv::Rect(Point2d(left, top), Point2d(right, bottom));
 
 	return;
 
@@ -122,110 +136,116 @@ void setEqlim(cv::Mat &shape, int rows, int cols, cv::Rect &facereg)
 void vect2test (cv::Mat &vect, std::vector<double> &test)
 {
 	int i, n = vect.rows/2;
-	cv::Point left_eye, right_eye, nose;
+	Point2d left_eye, right_eye, nose;
+//	for (std::vector<double>::size_type i; i<n;i++){
+//		printf("Vect [%lu]: (%f,%f)\n", i, vect.at<double>(i,0), vect.at<double>(i+n,0));
+//	}
+
 	float between_eyes;
 	test.clear();
-	left_eye = cv::Point(vect.at<double>(36,0)/2+vect.at<double>(39,0)/2,vect.at<double>(36+n,0)/2+vect.at<double>(39+n,0)/2);
-	right_eye = cv::Point(vect.at<double>(42,0)/2+vect.at<double>(45,0)/2,vect.at<double>(42+n,0)/2+vect.at<double>(45+n,0)/2);
+	left_eye = Point2d(vect.at<double>(36,0)/2+vect.at<double>(39,0)/2,vect.at<double>(36+n,0)/2+vect.at<double>(39+n,0)/2);
+	right_eye = Point2d(vect.at<double>(42,0)/2+vect.at<double>(45,0)/2,vect.at<double>(42+n,0)/2+vect.at<double>(45+n,0)/2);
 	between_eyes = distance_between(left_eye, right_eye);
-	cv::Point p1, p2;
-
-	//p1 = cv::Point((vect.at<double>(19,0)+vect.at<double>(24,0))/2,vect.at<double>(19+n,0));
-	//p2 = cv::Point(vect.at<double>(8,0), vect.at<double>(9+n,0));
-	//face_size = distance_between(p1,p2);
-	nose = cv::Point((vect.at<double>(30,0)+vect.at<double>(33,0))/2,(vect.at<double>(30+n,0)+vect.at<double>(33+n,0))/2);
+	Point2d p1, p2;
+//	printf("D = %f", between_eyes);
+//	p1 = Point2d((vect.at<double>(19,0)+vect.at<double>(24,0))/2,vect.at<double>(19+n,0));
+//	p2 = Point2d(vect.at<double>(8,0), vect.at<double>(9+n,0));
+//	face_size = distance_between(p1,p2);
+	nose = Point2d((vect.at<double>(30,0)+vect.at<double>(33,0))/2,(vect.at<double>(30+n,0)+vect.at<double>(33+n,0))/2);
 
 //	printf("Point : (%f, %f)\n", vect.at<double>(30,0), vect.at<double>(30+n,0));
 //	printf("D = %f\n", between_eyes);
-//	printf("nose points: X %d, Y %d\n", right_eye.x,right_eye.y);
+//	printf("\nNose points: X %f, Y %f\n", vect.at<double>(30,0),vect.at<double>(30+n,0));
 
 
 	for(i = 0 ; i < 17;  i++)
 	 {
 
-	   p1 = cv::Point(vect.at<double>(i,0), vect.at<double>(i+n,0));
+	   p1 = Point2d(vect.at<double>(i,0), vect.at<double>(i+n,0));
 	   test.push_back(distance_between(p1,nose)/between_eyes);
 	 }
 	for(i = 17; i < 22;  i++)
 	 {
 
-	   p1 = cv::Point(vect.at<double>(i,0), vect.at<double>(i+n,0));
+	   p1 = Point2d(vect.at<double>(i,0), vect.at<double>(i+n,0));
 	   test.push_back(distance_between(p1,left_eye)/between_eyes);
 	 }
 	for(i = 22; i < 27;  i++)
 	 {
 
-	   p1 = cv::Point(vect.at<double>(i,0), vect.at<double>(i+n,0));
+	   p1 = Point2d(vect.at<double>(i,0), vect.at<double>(i+n,0));
 	   test.push_back(distance_between(p1,right_eye)/between_eyes);
 	 }
 	for(i = 31; i < 36;  i++)
 	 {
 
-	   p1 = cv::Point(vect.at<double>(i,0), vect.at<double>(i+n,0));
+	   p1 = Point2d(vect.at<double>(i,0), vect.at<double>(i+n,0));
 	   test.push_back(distance_between(p1,nose)/between_eyes);
 	 }
 	for(i = 36; i < 42;  i++)
 	 {
 
-	   p1 = cv::Point(vect.at<double>(i,0), vect.at<double>(i+n,0));
+	   p1 = Point2d(vect.at<double>(i,0), vect.at<double>(i+n,0));
 	   test.push_back(distance_between(p1,left_eye)/between_eyes);
 	 }
 	for(i = 42; i < 48;  i++)
 	 {
 
-	   p1 = cv::Point(vect.at<double>(i,0), vect.at<double>(i+n,0));
+	   p1 = Point2d(vect.at<double>(i,0), vect.at<double>(i+n,0));
 	   test.push_back(distance_between(p1,right_eye)/between_eyes);
 	 }
 	for(i = 48; i < 66;  i++)
 	 {
 
-	   p1 = cv::Point(vect.at<double>(i,0), vect.at<double>(i+n,0));
+	   p1 = Point2d(vect.at<double>(i,0), vect.at<double>(i+n,0));
 	   test.push_back(distance_between(p1,nose)/between_eyes);
 	 }
 	for(i = 0; i < 5;  i++)
 	 {
 
-	   p1 = cv::Point(vect.at<double>(17+i,0), vect.at<double>(17+i+n,0));
-	   p2 = cv::Point(vect.at<double>(26-i,0), vect.at<double>(26-i+n,0));
+	   p1 = Point2d(vect.at<double>(17+i,0), vect.at<double>(17+i+n,0));
+	   p2 = Point2d(vect.at<double>(26-i,0), vect.at<double>(26-i+n,0));
 	   test.push_back(distance_between(p1,p2)/between_eyes);
 	 }
+
+
 	for(i = 22; i < 27;  i++)
 	 {
 
-	   p1 = cv::Point(vect.at<double>(i,0), vect.at<double>(i+n,0));
-	   test.push_back(distance_between(p1,right_eye)/between_eyes);
+	   p1 = Point2d(vect.at<double>(i,0), vect.at<double>(i+n,0));
+	   test.push_back(distance_between(p1,nose)/between_eyes);
 	 }
 	for(i = 17; i < 22;  i++)
 	 {
 
-	   p1 = cv::Point(vect.at<double>(i,0), vect.at<double>(i+n,0));
-	   test.push_back(distance_between(p1,left_eye)/between_eyes);
+	   p1 = Point2d(vect.at<double>(i,0), vect.at<double>(i+n,0));
+	   test.push_back(distance_between(p1,nose)/between_eyes);
 	 }
 	for(i = 0; i < 3;  i++)
 	 {
 
-	   p1 = cv::Point(vect.at<double>(56+i,0), vect.at<double>(56+i+n,0));
-	   p2 = cv::Point(vect.at<double>(52-i,0), vect.at<double>(52-i+n,0));
+	   p1 = Point2d(vect.at<double>(56+i,0), vect.at<double>(56+i+n,0));
+	   p2 = Point2d(vect.at<double>(52-i,0), vect.at<double>(52-i+n,0));
 	   test.push_back(distance_between(p1,p2)/between_eyes);
 	 }
 
-	   p1 = cv::Point(vect.at<double>(48,0), vect.at<double>(48+n,0));
-	   p2 = cv::Point(vect.at<double>(54,0), vect.at<double>(54+n,0));
+	   p1 = Point2d(vect.at<double>(48,0), vect.at<double>(48+n,0));
+	   p2 = Point2d(vect.at<double>(54,0), vect.at<double>(54+n,0));
 	   test.push_back(distance_between(p1,p2)/between_eyes);
 
-	   p1 = cv::Point(vect.at<double>(49,0), vect.at<double>(49+n,0));
-	   p2 = cv::Point(vect.at<double>(53,0), vect.at<double>(53+n,0));
+	   p1 = Point2d(vect.at<double>(49,0), vect.at<double>(49+n,0));
+	   p2 = Point2d(vect.at<double>(53,0), vect.at<double>(53+n,0));
 	   test.push_back(distance_between(p1,p2)/between_eyes);
 
-	   p1 = cv::Point(vect.at<double>(59,0), vect.at<double>(59+n,0));
-	   p2 = cv::Point(vect.at<double>(55,0), vect.at<double>(55+n,0));
+	   p1 = Point2d(vect.at<double>(59,0), vect.at<double>(59+n,0));
+	   p2 = Point2d(vect.at<double>(55,0), vect.at<double>(55+n,0));
 	   test.push_back(distance_between(p1,p2)/between_eyes);
 
 		for(i = 0; i < 3;  i++)
 		 {
 
-		   p1 = cv::Point(vect.at<double>(60+i,0), vect.at<double>(60+i+n,0));
-		   p2 = cv::Point(vect.at<double>(65-i,0), vect.at<double>(65-i+n,0));
+		   p1 = Point2d(vect.at<double>(60+i,0), vect.at<double>(60+i+n,0));
+		   p2 = Point2d(vect.at<double>(65-i,0), vect.at<double>(65-i+n,0));
 		   test.push_back (distance_between(p1,p2)/between_eyes);
 		 }
 
@@ -262,5 +282,7 @@ void file2vect (const char* filename, std::vector<double> &vect)
 
 
 }
+
+
 
 #endif /* VECTHELP_H_ */

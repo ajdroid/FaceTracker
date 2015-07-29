@@ -8,10 +8,13 @@
 #include <string>
 #include <stdlib.h>
 #include <FaceTracker/vecthelp.h>
-//#include <svm.h>
+#include <SVM/merge_files.h>
+#include <SVM/svm.h>
 
 using namespace cv;
 using namespace std;
+
+struct svm_model* svmmodel;
 
 void SimplestCB(Mat& in, Mat& out, float percent) {
 	assert(in.channels() == 3);
@@ -57,7 +60,7 @@ void Draw(cv::Mat &image, cv::Mat &shape, cv::Mat &con, cv::Mat &tri,
 	cv::Point p1, p2;
 	cv::Scalar c;
 
-	// draw rshape
+	// draw rect shape
 	for (i = 0; i < n; i++) {
 		if (visi.at<int>(i, 0) == 0)
 			continue;
@@ -74,7 +77,7 @@ void Draw(cv::Mat &image, cv::Mat &shape, cv::Mat &con, cv::Mat &tri,
 		p1 = cv::Point(shape.at<double>(i, 0), shape.at<double>(i + n, 0));
 		c = CV_RGB(255,0,0);
 		cv::circle(image, p1, 2, c);
-		//cv::putText(image, std::to_string(i+1),p1,CV_FONT_HERSHEY_PLAIN,0.5,cv::Scalar::all(0));
+//		cv::putText(image, std::to_string(i+1),p1,CV_FONT_HERSHEY_PLAIN,0.5,cv::Scalar::all(0));
 	}
 	return;
 
@@ -135,18 +138,19 @@ int main() {
 	cv::Mat tri; //=FACETRACKER::IO::LoadTri(triFile);
 	cv::Mat con; //=FACETRACKER::IO::LoadCon(conFile);
 	std::string impath =
-			"/home/abhijat/Downloads/Intern/git/CUROP---Face-Tracker/svm_training_multi_18/";
+			"/home/abhijat/Downloads/Intern/git/CUROP---Face-Tracker/svm_training_multi_18/../";
 	std::string imfile;
 
 
 	//initialize camera and display window
+	cv::VideoCapture camera(0);
+				if (!camera.isOpened())
+					return -1;
 	cv::Mat tmp, frame, gray, im;
 	double fps = 0;
 	char sss[256];
 	std::string text;
-	cv::VideoCapture camera(-1);
-	if (!camera.isOpened())
-		return -1;
+
 	int64 t1, t0 = cvGetTickCount();
 	int fnum = 0;
 
@@ -161,12 +165,13 @@ int main() {
 
 	//loop until quit (i.e user presses quit)
 	bool failed = true;
-	while (1) {
-		//grab image, resize and flip
-
-
+	int cond=1, idx =0;
+	while (cond) {
+//		grab image, resize and flip
+//		svmmodel = svm_load_model("emotions.train.pca.model");
 		camera>>frame;
 
+//		printf("\nFrame number: %d\n", ++idx);
 		imfile = impath + "vector.png";
 		//frame = imread(imfile.c_str(), CV_LOAD_IMAGE_COLOR);
 
@@ -174,14 +179,14 @@ int main() {
 			im = frame;
 		else
 			cv::resize(frame, im, cv::Size(scale * frame.cols, scale * frame.rows));
-		//scale = 0.25;
+//		scale = 0.25;
 		cv::resize(frame, im, cv::Size(scale * frame.cols, scale * frame.rows));
 		cv::flip(im,im,1);
 		cv::cvtColor(im, gray, CV_BGR2GRAY);
-		//equalizeHist(gray,gray);
+//		equalizeHist(gray,gray);
 		SimplestCB(im,im,1);
 //============================== set face equalization region extremities
-		cv::Rect facereg;
+		cv::Rect facereg(0,0,0,0);
 		setEqlim(model._shape, im.rows, im.cols, facereg);
 
 		Mat ROI;
@@ -195,13 +200,12 @@ int main() {
 		cv::equalizeHist(ROI, ROI);
 
 
-//=============	 track this image
+//================================	 track this image
 		std::vector<int> wSize;
 		if (failed)
 			wSize = wSize2;
 		else
 			wSize = wSize1;
-		;
 
 		if (model.Track(gray, wSize, fpd, nIter, clamp, fTol, fcheck) == 0) {
 			int idx = model._clm.GetViewIdx();
@@ -209,9 +213,11 @@ int main() {
 			Draw(im, model._shape, con, tri, model._clm._visi[idx],
 					model._rshape);
 			vect2test(model._shape, test);
-			//printf("Size of the test vector = %f\n", test.front());
 			pca_project(test, eigv, mu, sigma, eigsize, feat);
-
+			featfiler(feat);
+			system("./merge_files vector.pca");
+//			svmrun(svmmodel);
+			svm_free_and_destroy_model(&svmmodel);
 		} else {
 			if (showfps) {
 				cv::Mat R(im, cv::Rect(0, 0, 150, 50));
@@ -221,13 +227,9 @@ int main() {
 			failed = true;
 		}
 
-#if rectshow
-		cv::Point pTopLeft(im.cols/3, im.rows/4), pBottomRight(2*im.cols/3, 3*im.rows/4);
-		cv::Rect R(pTopLeft, pBottomRight);
-		cv::rectangle(im, R, cv::Scalar(0,0,0));
-#endif
 
-//============= draw framerate on display image
+
+//======================== Draw framerate on display image
 		if (fnum >= 9) {
 			t1 = cvGetTickCount();
 			fps = 10.0 / ((double(t1 - t0) / cvGetTickFrequency()) / 1e+6);
@@ -247,7 +249,7 @@ int main() {
 		const Mat& pose = model._clm._pglobl;
 		DrawHP(im, pose);
 
-//======================= show image and check for user input
+//========================== Show image and check for user input
 
 		imshow("Face Tracker", gray);
 		imshow("Face Tracker1", im);
@@ -257,10 +259,12 @@ int main() {
 		else if (char(c) == 'd')
 			model.FrameReset();
 		else if (char(c) == 'c')
-			imwrite(
-					"/home/abhijat/Downloads/Intern/git/CUROP---Face-Tracker/svm_training/cap.png",
+			imwrite("/home/abhijat/Downloads/Intern/git/CUROP---Face-Tracker/svm_training/cap.png",
 					im);
+
 	}
+
 	return 0;
+
 }
 //=============================================================================
